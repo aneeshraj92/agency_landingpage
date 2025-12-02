@@ -5,6 +5,7 @@ import { WhyUs } from "@/components/ui/WhyUs";
 import { Testimonials } from "@/components/ui/Testimonials";
 import { Footer } from "@/components/ui/Footer";
 import { BookingForm } from "@/components/ui/BookingForm"; // The integrated form
+import { CTA } from "@/components/ui/CTA";
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
       <Services />
       <WhyUs />
       <Testimonials />
+      <CTA />
 
       {/* Booking Form Section */}
       <section id="consultation" className="py-24 bg-gray-900 border-t border-b border-purple-900/50">

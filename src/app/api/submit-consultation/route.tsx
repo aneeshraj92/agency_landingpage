@@ -1,23 +1,34 @@
 // src/app/api/submit-consultation/route.ts
+// Next.js 13+ App Router API Route structure
+
 import { NextResponse } from 'next/server';
 
+// 1. Get the Webhook URL from the environment variables
 const SHEET_MONKEY_ENDPOINT = process.env.SHEET_MONKEY_ENDPOINT;
 
 export async function POST(request: Request) {
+  // Security Check 1: Ensure the webhook endpoint is configured
   if (!SHEET_MONKEY_ENDPOINT) {
-    return NextResponse.json({ error: 'Server configuration error: Webhook not set.' }, { status: 500 });
+    console.error("SHEET_MONKEY_ENDPOINT not configured.");
+    return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
+  }
+
+  // Security Check 2: Only process JSON data
+  if (request.headers.get('content-type') !== 'application/json') {
+    return NextResponse.json({ error: 'Invalid content type.' }, { status: 400 });
   }
 
   try {
     const data = await request.json();
 
+    // Add extra useful data before sending to the sheet
     const submissionData = {
         ...data,
         timestamp: new Date().toISOString(),
-        source: 'Website Landing Page Consultation Form',
+        source: 'Website Landing Page CTA',
     };
 
-    // Forward the data to the Google Sheet service (e.g., Sheet Monkey)
+    // 2. Forward the data to the Sheet Monkey/Google Sheet Webhook
     const sheetResponse = await fetch(SHEET_MONKEY_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -27,9 +38,12 @@ export async function POST(request: Request) {
     });
 
     if (sheetResponse.ok) {
-      return NextResponse.json({ message: 'Submission successful.' }, { status: 200 });
+      // 3. Respond back to the client that the submission was successful
+      return NextResponse.json({ message: 'Submission successful, data logged to Google Sheet.' }, { status: 200 });
     } else {
-      console.error('Sheet Service Error:', await sheetResponse.text());
+      // Handle potential errors from the sheet service
+      const errorText = await sheetResponse.text();
+      console.error('Sheet Service Error:', errorText);
       return NextResponse.json({ error: 'Failed to log data to Google Sheet.' }, { status: 500 });
     }
 

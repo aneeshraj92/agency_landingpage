@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Add this line for smooth scrolling on all internal links */
+html {
+  scroll-behavior: smooth; 
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
