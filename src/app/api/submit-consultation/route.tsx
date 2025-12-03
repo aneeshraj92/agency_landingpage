@@ -7,12 +7,9 @@ const SHEET_MONKEY_ENDPOINT = process.env.SHEET_MONKEY_ENDPOINT;
 export async function POST(request: Request) {
   if (!SHEET_MONKEY_ENDPOINT || !SHEET_MONKEY_ENDPOINT.startsWith("http")) {
     console.error("SHEET_MONKEY_ENDPOINT not configured or invalid.");
-    return new Response(
-      JSON.stringify({ error: "Server configuration error." }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+    return NextResponse.json(
+      { error: "Server configuration error." },
+      { status: 500 }
     );
   }
 
@@ -23,8 +20,9 @@ export async function POST(request: Request) {
       ...data,
       timestamp: new Date().toISOString(),
       source: "Website Landing Page CTA",
-    }; // 2. Forward the data to the Sheet Monkey/Google Sheet Webhook
+    };
 
+    // Forward the data to the Sheet Monkey/Google Sheet Webhook
     const sheetResponse = await fetch(SHEET_MONKEY_ENDPOINT, {
       method: "POST",
       headers: {
@@ -33,34 +31,38 @@ export async function POST(request: Request) {
       body: JSON.stringify(submissionData),
     });
 
-    if (sheetResponse.ok) {
-      // 🚨 CRITICAL FIX: Consume the response body of the external service.
-      await sheetResponse.text(); // 3. Use standard Response object for robustness.
+    // Consume the response body regardless of status
+    const responseText = await sheetResponse.text();
 
-      return new Response(
-        JSON.stringify({
-          message: "Submission successful! Your consultation is booked.",
-        }),
+    if (sheetResponse.ok) {
+      // Success: data was posted to the sheet
+      return NextResponse.json(
         {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }
+          message: "Submission successful! Your consultation is booked.",
+          success: true,
+        },
+        { status: 200 }
       );
     } else {
-      // Handle non-successful status from webhook
-      const errorText = await sheetResponse.text();
-      console.error("Sheet Service Error (Non-200):", errorText);
+      // Non-2xx response from Sheet Monkey
+      console.error(
+        `Sheet Service Error (${sheetResponse.status}):`,
+        responseText
+      );
       return NextResponse.json(
-        { error: "Failed to log data to Google Sheet." },
+        { error: "Failed to log data to Google Sheet.", details: responseText },
         { status: 500 }
       );
     }
   } catch (error) {
-    // This catches connection errors, network failures, or JSON parsing issues.
-    console.error("Error processing request/Network failure:", error); // Use new Response for consistency
-    return new Response(JSON.stringify({ error: "Internal Server Error." }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Network errors, JSON parsing errors, etc.
+    console.error("Error processing request:", error);
+    return NextResponse.json(
+      {
+        error: "Internal Server Error.",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
 }
